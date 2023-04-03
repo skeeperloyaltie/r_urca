@@ -1,0 +1,164 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+
+Introduction
+The two time series with monthly frequency provided are Capacity Utilisation Rate (TCU) and Consumer Price Index Inflation Rate (CPIAUCSL). TCU represents the extent to which the production capacity of firms is being used, while CPIAUCSL represents the changes in the cost of a basket of goods and services purchased by households.
+TCU is measured as the ratio of actual output to potential output. The actual output is measured using industrial production data, while potential output is estimated using data on capacity constraints, including production capacity and capital stock. The output gap is then calculated as the difference between actual output and potential output, and TCU is obtained by scaling the output gap by potential output.
+CPIAUCSL is measured as the percentage change in the Consumer Price Index (CPI) from one year ago. CPI is a measure of the average price level of a basket of goods and services consumed by households. The percentage change is obtained by calculating the difference between the current month's CPI and the CPI of the same month one year ago, divided by the CPI of the same month one year ago, and then multiplied by 100.
+Loading Packages
+```{r}
+library(dynamac)          # For ARDL estimation
+library(forecast)         # For ARIMA model estimation
+library(tseries)          # for time series models and diagnostic checks
+library(nlme)             # to estimate ARIMA models
+library(pdfetch)          # to fetch data directly from online data bases
+library(zoo)              # for the zoo function for daily time series
+library(urca)             # for unit root tests
+library(vars)             # for Granger tests and VAR estimation
+library(car)              # for regression diagnostics and hypothesis testing
+library(dynlm)            # for Vector Error Correction Model(VECM)
+library(tsDyn)            # for linear and non-linear VAR and VECM models
+library(gets)             # for Isat function: step and impsulse indicator saturation
+library(readxl)           # to read Excel files and load the data from Excel files
+library(aod)              # for Wald tests
+library(egcm)             # Engle-Granger cointegration test
+library(aTSA)             # Engle-Granger cointegration test
+library(tidyverse)
+```
+Clear the data buffer:
+```{r}
+rm(list=ls())
+```
+Inflation data
+The CPI data is read from FRED using the pdfetch_FRED() function from the quantmod package. The names() function is used to assign the name "CPI" to the resulting data.
+The inflation rate is calculated by taking the first difference of the logarithm of the CPI series, lagged by 12 periods (i.e., one year). This gives the percentage change in the CPI from one year ago, which is a common measure of inflation. The resulting series is multiplied by 100 to convert it from a decimal to a percentage. The names() function is then used again to assign the name "Inflation" to the resulting data.
+The resulting inflation series is converted to a time series using the ts() function, with a start date of January 1947 and a frequency of 12 (monthly data). The na.omit() function is then used to remove any missing values from the series, which are present because the CPI data only begins in January 1948.
+The capacity utilization data is obtained using a similar process. The pdfetch_FRED() function is used to download the data for "TCU" (total capacity utilization), which is then assigned the name "TCU" using names(). The resulting data is converted to a time series using the ts() function, with a start date of January 1967 and a frequency of 12 (monthly data).
+```{r}
+
+CPI = pdfetch_FRED("CPIAUCSL")
+names(CPI) = "CPI"
+
+Inflation = diff(log(CPI), lag = 12) * 100                               # Percent change from year ago
+names(Inflation) = "Inflation"
+
+Inflation = ts(Inflation, start=c(1947, 1), frequency=12)
+Inflation = na.omit(Inflation)                                                 # inflation series begins in January 1948
+```
+Capacity utilization data:
+```{r}
+TCU = pdfetch_FRED("TCU")
+names(TCU) = "TCU"
+TCU = ts(TCU, start=c(1967, 1), frequency=12)
+```
+How the Data is Measured
+
+The data consists of two time series: the Consumer Price Index (CPI) and the Capacity Utilization Rate (CUR).
+The CPI measures the average change in prices over time of a fixed basket of goods and services consumed by households. It is calculated by the Bureau of Labor Statistics (BLS) in the United States and is widely used as a measure of inflation. The CPI in this dataset is measured in levels and represents the monthly average price of the fixed basket of goods and services in the United States.
+The Capacity Utilization Rate (CUR) is a measure of the extent to which a firm is using its installed productive capacity. It is calculated as the ratio of actual output to potential output, where potential output is the maximum level of output that a firm can produce with its installed productive capacity. In this dataset, the CUR is measured in levels and represents the percentage of productive capacity that is being utilized in the manufacturing, mining, and electric and gas utilities industries in the United States.
+
+Plotting Data
+```{r}
+# Plot TCU in levels
+ggplot() +
+  geom_line(data = TCU, aes(x = time(TCU), y = TCU), color = 'blue') +
+  labs(title = "Capacity Utilisation Rate (TCU)") +
+  ylab("TCU") +
+  xlab("Year")
+```
+Consumer Price Index Inflation Rate (CPIAUCSL)
+```{r}
+# Plot CPIAUCSL in levels
+ggplot() +
+  geom_line(data = CPI, aes(x = time(CPI), y = CPI), color = 'red') +
+  labs(title = "Consumer Price Index Inflation Rate (CPIAUCSL)") +
+  ylab("CPIAUCSL") +
+  xlab("Year")
+```
+Capacity Utilisation Rate (TCU) - First Differences
+```{r}
+# Plot TCU in first differences
+ggplot() +
+  geom_line(data = diff(TCU), aes(x = time(TCU)[2:length(time(TCU))], y = diff(TCU)), color = 'blue') +
+  labs(title = "Capacity Utilisation Rate (TCU) - First Differences") +
+  ylab("TCU Diff") +
+  xlab("Year")
+```
+Consumer Price Index Inflation Rate (CPIAUCSL)
+```{r}
+# Plot CPIAUCSL in first differences
+ggplot() +
+  geom_line(data = CPI, aes(x = time(CPI), y = CPI), color = 'blue') +
+  labs(title = "Consumer Price Index Inflation Rate (CPIAUCSL)") +
+  ylab("CPIAUCSL") +
+  xlab("Year")
+```
+ADF, PP, and KPSS unit root tests.
+To run the ADF, PP, and KPSS unit root tests, we can use the ur.df function from the urca package. The ADF and PP tests are used to test for a unit root in the series, while the KPSS test is used to test for stationarity. We need to run each test twice for each series, first in levels and then in first differences.
+ADF test for inflation in levels
+```{r}
+ur.df(Inflation, type = "drift", lags = 12, selectlags = "AIC")
+summary(ur.df(Inflation, type = "drift", lags = 12, selectlags = "AIC"))
+```
+PP test for inflation in levels
+```{r}
+ur.pp(Inflation, type = "Z-alpha", lags = NULL)
+summary(ur.pp(Inflation, type = "Z-alpha", lags = NULL))
+```
+KPSS test for inflation in levels
+```{r}
+summary(ur.kpss(Inflation, type = "tau", lags = "short"))
+
+
+```
+
+
+
+ADF test for inflation in first differences
+```{r}
+ur.df(diff(Inflation), type = "drift", lags = 12, selectlags = "AIC")
+summary(ur.df(diff(Inflation), type = "drift", lags = 12, selectlags = "AIC"))
+```
+PP test for inflation in first differences
+```{r}
+ur.pp(diff(Inflation), type = "Z-alpha", lags = NULL)
+summary(ur.pp(diff(Inflation), type = "Z-alpha", lags = NULL))
+```
+KPSS test for inflation in first differences
+```{r}
+summary(ur.kpss(diff(Inflation), type = "tau", lags = "short"))
+```
+
+ADF test for TCU in levels
+```{r}
+ur.df(TCU, type = "drift", lags = 12, selectlags = "AIC")
+summary(ur.df(TCU, type = "drift", lags = 12, selectlags = "AIC"))
+```
+
+PP test for TCU in levels
+```{r}
+ur.pp(TCU, type = "Z-alpha", lags = NULL)
+summary(ur.pp(TCU, type = "Z-alpha", lags = NULL))
+```
+KPSS test for TCU in levels
+```{r}
+summary(ur.kpss(TCU, type = "tau", lags = NULL))
+```
+ADF test for TCU in first differences
+```{r}
+ur.df(diff(TCU), type = "drift", lags = 12, selectlags = "AIC")
+summary(ur.df(diff(TCU), type = "drift", lags = 12, selectlags = "AIC"))
+```
+PP test for TCU in first differences
+```{r}
+ur.pp(diff(TCU), type = "Z-alpha", lags = NULL)
+summary(ur.pp(diff(TCU), type = "Z-alpha", lags = NULL))
+```
+KPSS test for TCU in first differences
+```{r}
+summary(ur.kpss(diff(TCU), type = "tau", lags = "short"))
+```
+
