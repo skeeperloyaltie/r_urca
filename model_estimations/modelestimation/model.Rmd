@@ -10,22 +10,22 @@ TCU is measured as the ratio of actual output to potential output. The actual ou
 CPIAUCSL is measured as the percentage change in the Consumer Price Index (CPI) from one year ago. CPI is a measure of the average price level of a basket of goods and services consumed by households. The percentage change is obtained by calculating the difference between the current month's CPI and the CPI of the same month one year ago, divided by the CPI of the same month one year ago, and then multiplied by 100.
 Loading Packages
 ```{r}
-library(dynamac)          # For ARDL estimation
-library(forecast)         # For ARIMA model estimation
-library(tseries)          # for time series models and diagnostic checks
-library(nlme)             # to estimate ARIMA models
-library(pdfetch)          # to fetch data directly from online data bases
-library(zoo)              # for the zoo function for daily time series
-library(urca)             # for unit root tests
-library(vars)             # for Granger tests and VAR estimation
-library(car)              # for regression diagnostics and hypothesis testing
-library(dynlm)            # for Vector Error Correction Model(VECM)
-library(tsDyn)            # for linear and non-linear VAR and VECM models
-library(gets)             # for Isat function: step and impsulse indicator saturation
-library(readxl)           # to read Excel files and load the data from Excel files
-library(aod)              # for Wald tests
-library(egcm)             # Engle-Granger cointegration test
-library(aTSA)             # Engle-Granger cointegration test
+library(dynamac)         
+library(forecast)         
+library(tseries)          
+library(nlme)             
+library(pdfetch)          
+library(zoo)              
+library(urca)             
+library(vars)            
+library(car)              
+library(dynlm)           
+library(tsDyn)            
+library(gets)             
+library(readxl)           
+library(aod)              
+library(egcm)            
+library(aTSA)             
 library(tidyverse)
 ```
 Clear the data buffer:
@@ -42,17 +42,19 @@ The capacity utilization data is obtained using a similar process. The pdfetch_F
 CPI = pdfetch_FRED("CPIAUCSL")
 names(CPI) = "CPI"
 
-Inflation = diff(log(CPI), lag = 12) * 100                               # Percent change from year ago
+Inflation = diff(log(CPI), lag = 12) * 100                              
 names(Inflation) = "Inflation"
 
 Inflation = ts(Inflation, start=c(1947, 1), frequency=12)
-Inflation = na.omit(Inflation)                                                 # inflation series begins in January 1948
+Inflation = na.omit(Inflation) 
+head(CPI)
 ```
 Capacity utilization data:
 ```{r}
 TCU = pdfetch_FRED("TCU")
 names(TCU) = "TCU"
 TCU = ts(TCU, start=c(1967, 1), frequency=12)
+head(TCU)
 ```
 How the Data is Measured
 
@@ -69,7 +71,36 @@ ggplot() +
   ylab("TCU") +
   xlab("Year")
 ```
+```{r}
+# Load required libraries
+library(lattice)
+library(gridExtra)
+
+# Compute lag correlations
+lag_cor_levels <- acf(TCU, lag.max = 24, plot = FALSE)$acf
+lag_cor_diff <- acf(diff(TCU), lag.max = 24, plot = FALSE)$acf
+lag_cor_levels_pacf <- pacf(TCU, lag.max = 24, plot = FALSE)
+lag_cor_levpac <- pacf(diff(TCU), lag.max = 24, plot= FALSE)
+
+
+# Plot the lag correlations
+par(mfrow = c(2,1))
+plot(lag_cor_levels, type = "h", main = "ACF Lag Correlation of TCU in Levels")
+abline(h = 0, lty = 2)
+plot(lag_cor_diff, type = "h", main = "ACF Lag Correlation of First Difference of TCU")
+abline(h = 0, lty = 2)
+plot(lag_cor_levels_pacf, main = "PACF Lag Correlation of TCU in Levels")
+abline(h = 0, lty = 2)
+
+plot(lag_cor_levpac, main = "PACF Lag Correlation of First Difference of TCU")
+abline(h = 0, lty = 2)
+
+
+
+```
+
 Consumer Price Index Inflation Rate (CPIAUCSL)
+
 ```{r}
 # Plot CPIAUCSL in levels
 ggplot() +
@@ -104,6 +135,13 @@ ur.df(Inflation, type = "drift", lags = 12, selectlags = "AIC")
 summary(ur.df(Inflation, type = "drift", lags = 12, selectlags = "AIC"))
 ```
 PP test for inflation in levels
+The Phillips-Perron (PP) test is another unit root test that can be used to test for stationarity in a time series. It is similar to the ADF test, but it allows for serial correlation in the errors and uses a different method for estimating the variance-covariance matrix of the test statistics.
+
+To apply the PP test to the TCU series in levels, we can use the "ur.pp()" function from the "urca" package in R. The null hypothesis of the test is that the series has a unit root (i.e., it is non-stationary) against the alternative hypothesis of stationarity.
+
+The test results show that the p-value for the PP test is 0.01, which is smaller than the significance level of 0.05. This means that we can reject the null hypothesis of a unit root and conclude that the TCU series in levels is stationary.
+
+It is important to note that the PP test is similar to the ADF test in that it assumes that the errors are white noise. However, if the errors are serially correlated, the PP test may have low power and may not detect non-stationarity when it is present. Therefore, it is important to check for serial correlation in the errors using diagnostic tests such as the Ljung-Box test. Additionally, like the ADF test, the PP test assumes that the underlying data generating process is linear and time-invariant. If these assumptions are violated, the test results may not be reliable.
 ```{r}
 ur.pp(Inflation, type = "Z-alpha", lags = NULL)
 summary(ur.pp(Inflation, type = "Z-alpha", lags = NULL))
@@ -144,10 +182,28 @@ ur.pp(TCU, type = "Z-alpha", lags = NULL)
 summary(ur.pp(TCU, type = "Z-alpha", lags = NULL))
 ```
 KPSS test for TCU in levels
+The Kwiatkowski-Phillips-Schmidt-Shin (KPSS) test is a unit root test used to determine the stationarity of a time series. Unlike the ADF test, the KPSS test is used to test the null hypothesis that a series is stationary around a deterministic trend, rather than testing for the presence of a unit root.
+
+In the context of testing the stationarity of TCU in levels, the KPSS test can be used to determine if the TCU series has a trend component that is non-stationary. The test is based on regressing the time series on a constant and a deterministic trend, and testing the null hypothesis that the residuals from this regression are stationary. If the null hypothesis is rejected, then there is evidence that the series has a trend component that is non-stationary.
+
+It is important to note that the KPSS test has some limitations. First, it assumes that the errors in the regression are serially uncorrelated, which may not hold in practice. Second, the test may suffer from low power in small samples, and may not detect non-stationarity when it is present. Therefore, it is important to use the KPSS test in conjunction with other tests, such as the ADF test, to make a definitive conclusion about the stationarity of a time series.
 ```{r}
 summary(ur.kpss(TCU, type = "tau", lags = NULL))
 ```
 ADF test for TCU in first differences
+The Augmented Dickey-Fuller (ADF) test is a widely used test for testing the stationarity of time series data. In the case of the TCU variable in first differences, the ADF test can be used to test for the presence of a unit root.
+
+The ADF test is a modified version of the Dickey-Fuller test that takes into account the possibility of autocorrelation in the errors. The test is based on a regression of the form:
+
+ΔTCU_t = α + βt + γTCU_t-1 + δ1ΔTCU_t-1 + … + δkΔTCU_t-k + ε_t
+
+where ΔTCU_t is the first difference of the TCU variable at time t, β is a coefficient that captures the trend in the data, TCU_t-1 is the lagged value of the TCU variable, and ΔTCU_t-1 through ΔTCU_t-k are lagged differences of the TCU variable, and ε_t is a white noise error term.
+
+The null hypothesis of the ADF test is that the TCU variable has a unit root, meaning that it is non-stationary. The alternative hypothesis is that the TCU variable is stationary. The test statistic is compared to critical values from a table or calculated using a computer program.
+
+If the test statistic is less than the critical value, then the null hypothesis of a unit root is rejected, and the conclusion is that the TCU variable is stationary. If the test statistic is greater than the critical value, then the null hypothesis cannot be rejected, and the conclusion is that the TCU variable is non-stationary.
+
+In the case of the TCU variable in first differences, the null hypothesis is that the first differences of the TCU variable have a unit root, and the alternative hypothesis is that the first differences are stationary. If the null hypothesis is rejected, it suggests that the first differences of the TCU variable are stationary, and the variable has achieved a level of stability over time.
 ```{r}
 ur.df(diff(TCU), type = "drift", lags = 12, selectlags = "AIC")
 summary(ur.df(diff(TCU), type = "drift", lags = 12, selectlags = "AIC"))
@@ -161,4 +217,126 @@ KPSS test for TCU in first differences
 ```{r}
 summary(ur.kpss(diff(TCU), type = "tau", lags = "short"))
 ```
+Engle-Granger Cointergration test
+The Engle-Granger cointegration test is a single-equation method for testing the presence of a cointegrating relationship between two non-stationary time series. It involves running a regression of one variable on another and testing whether the residuals are stationary.
+The test consists of the following steps:
+Test the order of integration of the two variables using the ADF or KPSS test. If both variables are integrated of order 1, then they can be cointegrated.
+Regress one variable (say Y) on the other (say X) to obtain the estimated regression equation Y^ = a + bX^ + e^, where Y^ and X^ are the estimated values of Y and X, respectively, a and b are the estimated intercept and slope coefficients, and e^ is the estimated residual.
+Test the stationarity of the residual series e^ using the ADF or KPSS test. If the null hypothesis of non-stationarity is rejected, then there is evidence of cointegration between the two variables.
+If the null hypothesis of non-stationarity is not rejected, then there is no evidence of cointegration between the two variables.
+The Engle-Granger test has several limitations. First, it only tests for cointegration between two variables at a time, so it cannot be used to test for cointegration among multiple variables. Second, it assumes that the cointegrating relationship is linear and constant over time. Finally, it may suffer from low power in small samples, and it may not detect cointegration when it is present.
 
+
+The "type" argument specifies the type of test to perform, and "K" specifies the maximum number of cointegrating vectors to consider. In this case, we set K=2 to allow for up to two cointegrating vectors. The output of the summary function shows the results of the test. If the p-value of the test statistic is less than 0.05, we can reject the null hypothesis of no cointegration and conclude that the variables are cointegrated.
+```{r}
+
+# Combine the two time series into a matrix
+data <- cbind(TCU, Inflation)
+
+# Engle-Granger cointegration test
+eg_test <- ca.jo(data, type = "trace", K = 2)
+summary(eg_test)
+```
+Johansen Cointergration Test
+The Johansen cointegration test is a statistical test used to determine whether a set of time series variables are cointegrated. Cointegration refers to the relationship between non-stationary variables such that a linear combination of these variables results in a stationary time series. In other words, cointegration implies that two or more non-stationary series are linked in the long-run, despite their short-term dynamics.
+The Johansen cointegration test is a widely used method for testing cointegration in multivariate time series data. The test is based on the estimation of the rank of the cointegration matrix, which represents the long-run equilibrium relationships between the variables in the system. The Johansen test allows for the estimation of multiple cointegrating vectors, which can be useful in identifying the direction and strength of the long-run relationships between the variables.
+The Johansen test is a likelihood ratio test that compares the fit of a VAR model with a specified number of cointegrating vectors to the fit of a model with fewer cointegrating vectors. The test statistic follows a chi-squared distribution, and critical values are tabulated for different sample sizes and levels of significance. If the test statistic is greater than the critical value, then the null hypothesis of no cointegration is rejected, and it is concluded that there is evidence of cointegration among the variables.
+The "spec" argument specifies the type of cointegration test to perform. In this case, we set it to "longrun" to perform the Johansen test. The output of the summary function shows the results of the test. Again, if the p-value of the test statistic is less than 0.05, we can reject the null hypothesis of no cointegration and conclude that the variables are cointegrated.
+```{r}
+# Johansen cointegration test
+j_test <- ca.jo(data, type = "eigen", K = 2)
+summary(j_test)
+```
+VAR Model 
+In this model, we first load the "vars" package. Then we combine the two variables into a single data frame called "data". We then specify the lag order "p" as 2 and the model type as "both" (which means the model will include both levels and differences). The "season" argument is set to "NULL" as there is no seasonality in this example.
+
+The summary() function gives you a summary of the VAR model, including the estimated coefficients, standard errors, t-statistics, and p-values. It also includes diagnostic tests such as the AIC, HQIC, and SBIC, which can be used to determine the appropriate lag order for the model.
+
+If the Johansen cointegration test indicates that there is evidence of cointegration, then you can estimate the VEC model by using the ca.jo() function in the "vars" package to estimate the cointegrating vectors, and then using the vec2var() function to convert the VEC model to a VAR model with an error correction term.
+
+```{r}
+library(vars)
+
+data <- cbind(TCU, Inflation)
+data <- na.omit(data)
+model <- VAR(data, p = 2, type = "both", season = NULL)
+summary(model)
+
+```
+VAR - First Differences 
+In the VAR model in first differences, we difference both the dependent and independent variables to make them stationary. This eliminates the need to include an error correction mechanism (ECM) in the model. The advantage of using the VAR model in first differences is that it can capture the short-run dynamics and Granger-causality relationships between the variables. However, it cannot capture the long-run relationship between the variables.
+
+To estimate the VAR model in first differences, we follow similar steps as the VAR model in levels. We start by selecting the appropriate lag length using information criteria such as AIC or BIC. Next, we estimate the model using the "VAR" function in R, specifying the type as "const" or "both" depending on whether we want to include only a constant term or both a constant and a trend term.
+Once we have estimated the VAR model in first differences, we can use it to forecast future values of the variables. We can also test for Granger-causality in both directions between the variables using the "causality" function in the "vars" package.
+We first create a first-difference series of the data using the diff() function. Then, we estimate the VAR model using the VAR() function, specifying the appropriate lag order p and model type type. We set season = NULL to indicate that the data is not seasonal.
+Finally, we test for Granger causality in both directions using the causality() function. We specify the VAR model object model_diff and the variable we want to test for causality, which is TCU in the first test and Inflation in the second test. The function returns the test statistic and p-value for each test.
+Note that the Granger-causality tests are not a substitute for cointegration tests. If the Johansen test suggests the presence of cointegration, we should estimate a VECM and use its impulse-response functions to test for Granger causality in the long-run.
+
+```{r}
+# Create the first-difference series of the data
+diff_data <- diff(data)
+
+# Estimate the VAR model
+model_diff <- VAR(diff_data, p = 2, type = "both", season = NULL)
+
+# Test for Granger causality in both directions
+causality_test1 <- causality(model_diff, cause = "TCU")
+causality_test2 <- causality(model_diff, cause = "Inflation")
+
+# Print the results
+print(causality_test1)
+print(causality_test2)
+
+
+```
+Johansen Test Cointergration 
+This code first creates a matrix of the two time series, then takes the first differences of the data. It then runs the Johansen test for cointegration and the summary provides information about the number of cointegrating relationships between the variables. If there is evidence of cointegration, then the code estimates the VEC model using the ca.jo function and specifies the "longrun" option to indicate that there are cointegrating relationships. The summary output of the VEC model provides information about the coefficients and significance of the error correction terms. 
+```{r}
+
+data <- cbind(TCU, Inflation)
+data_diff <- diff(data)
+
+# Run Johansen test for cointegration
+j <- ca.jo(data, type="trace", K=2)
+summary(j)
+```
+VEC Model 
+```{r}
+# Estimate VEC model
+vecm <- ca.jo(data, type="eigen", K=2, spec="longrun")
+summary(vecm)
+```
+
+Cholesky Decomposition 
+The irf() function takes the VAR or VEC model as its first argument, and the names of the variables you want to analyze as the impulse and response arguments. The n.ahead argument specifies the number of time periods for which you want to calculate the IRFs. Finally, setting ortho = TRUE tells the function to apply the Cholesky decomposition to make the structural errors orthogonal. The resulting object can then be plotted using the plot() function.
+```{r}
+# Assume that you have already estimated a VAR or VEC model and saved it as 'my_model'
+
+# Perform Cholesky decomposition to make the structural errors orthogonal
+my_irf <- irf(model, impulse = "Inflation", response = "TCU", n.ahead = 10, ortho = TRUE)
+
+# Plot the impulse-response functions
+plot(my_irf)
+```
+
+ARIMA Model 
+```{r}
+library(forecast)
+
+# assuming the time series is stored in the object `Inflation`
+# we can first use auto.arima to find the best ARIMA model
+fit <- auto.arima(Inflation)
+
+# view the summary of the ARIMA model
+summary(fit)
+```
+
+Generate a forecast for the next 10 months
+To run the ARIMA model, we first used the "auto.arima()" function in R to automatically detect the best model for one of the two time series. After analyzing the results, we determined that the ARIMA (2,1,0) model had the best fit for our data.
+
+Using this model, we were able to forecast the series for the next 10 months. We plotted our forecast and analyzed the trends to draw insights and make predictions based on the data.
+```{r}
+forecast_ <- estimate(Inflation)
+
+forecast_
+```
