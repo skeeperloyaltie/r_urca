@@ -1,19 +1,19 @@
-library(dynamac)         
-library(forecast)         
-library(tseries)          
-library(nlme)             
-library(pdfetch)          
-library(zoo)              
-library(urca)             
-library(vars)            
-library(car)              
-library(dynlm)           
-library(tsDyn)            
-library(gets)             
-library(readxl)           
-library(aod)              
-library(egcm)            
-library(aTSA)             
+library(dynamac)
+library(forecast)
+library(tseries)
+library(nlme)
+library(pdfetch)
+library(zoo)
+library(urca)
+library(vars)
+library(car)
+library(dynlm)
+library(tsDyn)
+library(gets)
+library(readxl)
+library(aod)
+library(egcm)
+library(aTSA)
 library(tidyverse)
 
 rm(list=ls())
@@ -21,10 +21,10 @@ rm(list=ls())
 CPI = pdfetch_FRED("CPIAUCSL")
 names(CPI) = "CPI"
 
-Inflation = diff(log(CPI), lag = 12) * 100                              
+Inflation = diff(log(CPI), lag = 12) * 100
 names(Inflation) = "Inflation"
 Inflation = ts(Inflation, start=c(1947, 1), frequency=12)
-Inflation = na.omit(Inflation) 
+Inflation = na.omit(Inflation)
 head(CPI)
 TCU = pdfetch_FRED("TCU")
 names(TCU) = "TCU"
@@ -100,10 +100,10 @@ summary(ur.pp(diff(Inflation), type = "Z-alpha", lags = NULL))
 # KPSS test for inflation in first differences
 summary(ur.kpss(diff(Inflation), type = "tau", lags = "short"))
 
-# ADF Tests for TCu in levels  
+# ADF Tests for TCu in levels
 ur.df(TCU, type = "drift", lags = 12, selectlags = "AIC")
 summary(ur.df(TCU, type = "drift", lags = 12, selectlags = "AIC"))
-# PP tets for TCu in levels  
+# PP tets for TCu in levels
 ur.pp(TCU, type = "Z-alpha", lags = NULL)
 summary(ur.pp(TCU, type = "Z-alpha", lags = NULL))
 # KPSS test for TCU in levels
@@ -148,6 +148,15 @@ data_diff <- diff(data)
 # Run Johansen test for cointegration
 j <- ca.jo(data, type="trace", K=2)
 summary(j)
+
+# ARDL Modelling - Impulse Responce Evaluation
+
+m <- merge(Inflation, TCU)
+head(m)
+ardl.model <- dynardl(x ~ TCU, data = m, lags = list("TCU" = 1, "x" = 1), shockvar = 'TCU',
+                      diffs = c("x", "TCU"), simulate = TRUE)
+summary(ardl.model)
+jarque.bera.test(residuals(ardl.model))
 
 # Estimate VEC model
 vecm <- ca.jo(data, type="eigen", K=2, spec="longrun")

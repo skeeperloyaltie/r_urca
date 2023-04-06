@@ -61,7 +61,6 @@ How the Data is Measured
 The data consists of two time series: the Consumer Price Index (CPI) and the Capacity Utilization Rate (CUR).
 The CPI measures the average change in prices over time of a fixed basket of goods and services consumed by households. It is calculated by the Bureau of Labor Statistics (BLS) in the United States and is widely used as a measure of inflation. The CPI in this dataset is measured in levels and represents the monthly average price of the fixed basket of goods and services in the United States.
 The Capacity Utilization Rate (CUR) is a measure of the extent to which a firm is using its installed productive capacity. It is calculated as the ratio of actual output to potential output, where potential output is the maximum level of output that a firm can produce with its installed productive capacity. In this dataset, the CUR is measured in levels and represents the percentage of productive capacity that is being utilized in the manufacturing, mining, and electric and gas utilities industries in the United States.
-
 Plotting Data
 ```{r}
 # Plot TCU in levels
@@ -85,8 +84,7 @@ lag_cor_levpac <- pacf(diff(TCU), lag.max = 24, plot= FALSE)
 
 # Plot the lag correlations
 par(mfrow = c(2,1))
-plot(lag_cor_levels, type = "h", main = "ACF Lag Correlation of TCU in Levels")
-abline(h = 0, lty = 2)
+
 plot(lag_cor_diff, type = "h", main = "ACF Lag Correlation of First Difference of TCU")
 abline(h = 0, lty = 2)
 plot(lag_cor_levels_pacf, main = "PACF Lag Correlation of TCU in Levels")
@@ -98,7 +96,28 @@ abline(h = 0, lty = 2)
 
 
 ```
+```{r}
+library(dynamac)
 
+
+```
+
+```{r}
+ardl.model <- dynardl(Jan~., data = TCU, lags = list("Feb" = 1, "Jan" = 1),
+       diffs = c("Jan", "Feb"), 
+       ec = TRUE, simulate = FALSE)
+```
+
+```{r}
+dwtest(ardl_model) # Durbin-Watson test for autocorrelation in residuals
+bgtest(ardl_model) # Breusch-Godfrey test for autocorrelation in residuals
+jarque.bera.test(ardl_model$residuals) # Jarque-Bera test for normality of residuals
+imp_resp <- dynguirf(ardl_model, n.ahead = 10, shock = "X", shock.scale = 1)
+plot(imp_resp, main = "Impulse-Response Functions")
+
+
+
+```
 Consumer Price Index Inflation Rate (CPIAUCSL)
 
 ```{r}
@@ -295,11 +314,48 @@ This code first creates a matrix of the two time series, then takes the first di
 
 data <- cbind(TCU, Inflation)
 data_diff <- diff(data)
-
+head(data_diff)
+```
+```{r}
 # Run Johansen test for cointegration
 j <- ca.jo(data, type="trace", K=2)
 summary(j)
 ```
+
+```{r}
+
+m <- merge(Inflation, TCU)
+head(m)
+```
+
+```{r}
+ardl.model <- dynardl(x ~ TCU, data = m, lags = list("TCU" = 1, "x" = 1), shockvar = 'TCU',
+       diffs = c("x", "TCU"), simulate = TRUE)
+```
+
+```{r}
+summary(ardl.model)
+
+```
+```{r}
+library(dynlm)
+library(dynutils)
+library(dynamac)
+
+# PSS bounds test
+
+
+# Diagnostic checks
+jarque.bera.test(residuals(ardl.model))
+
+```
+```{r}
+library(dyn)
+
+irf_ <- irf(ardl.model, impulse = "TCU", n.ahead = 12, simulate = TRUE)
+plot(ardl.model, xlab = "Time", ylab = "Inflation", main = "Impulse Response Function")
+```
+
 VEC Model 
 ```{r}
 # Estimate VEC model
