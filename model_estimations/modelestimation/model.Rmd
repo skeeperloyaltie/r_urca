@@ -94,30 +94,11 @@ plot(lag_cor_levpac, main = "PACF Lag Correlation of First Difference of TCU")
 abline(h = 0, lty = 2)
 
 
-
-```
-```{r}
-library(dynamac)
-
-
 ```
 
-```{r}
-ardl.model <- dynardl(Jan~., data = TCU, lags = list("Feb" = 1, "Jan" = 1),
-       diffs = c("Jan", "Feb"), 
-       ec = TRUE, simulate = FALSE)
-```
-
-```{r}
-dwtest(ardl_model) # Durbin-Watson test for autocorrelation in residuals
-bgtest(ardl_model) # Breusch-Godfrey test for autocorrelation in residuals
-jarque.bera.test(ardl_model$residuals) # Jarque-Bera test for normality of residuals
-imp_resp <- dynguirf(ardl_model, n.ahead = 10, shock = "X", shock.scale = 1)
-plot(imp_resp, main = "Impulse-Response Functions")
 
 
 
-```
 Consumer Price Index Inflation Rate (CPIAUCSL)
 
 ```{r}
@@ -348,12 +329,6 @@ library(dynamac)
 # Diagnostic checks
 jarque.bera.test(residuals(ardl.model))
 
-```
-```{r}
-library(dyn)
-
-irf_ <- irf(ardl.model, impulse = "TCU", n.ahead = 12, simulate = TRUE)
-plot(ardl.model, xlab = "Time", ylab = "Inflation", main = "Impulse Response Function")
 ```
 
 VEC Model 
