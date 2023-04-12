@@ -82,6 +82,63 @@ ggplot() +
   ylab("CPIAUCSL") +
   xlab("Year")
 
+
+# Run ADF test
+adf_inflation_none <- adf.test(inflation)
+
+adf_tcu_none <- adf.test(tcu)
+adf_tcu_drift <- adf.test(tcu)
+
+# Run PP test
+pp_inflation_none <- ur.pp(inflation, type = "Z-alpha", model = "constant", lags = NULL)
+pp_inflation_drift <- ur.pp(inflation, type = "Z-alpha", model = "trend", lags = NULL)
+
+pp_tcu_none <- ur.pp(tcu, type = "Z-alpha", model = "constant", lags = NULL)
+pp_tcu_drift <- ur.pp(tcu, type = "Z-alpha", model = "trend", lags = NULL)
+
+# Run KPSS test
+kpss_inflation_drift <- kpss.test(inflation)
+
+kpss_tcu_drift <- kpss.test(tcu)
+
+# Run ERS p-test
+ersp_inflation_drift <- ur.ers(inflation, model = "constant", lag.max = 12, type = "DF")
+
+ersp_tcu_drift <- ur.ers(tcu, model = "constant", lag.max = 12, type = "DF")
+
+# Run ERS DF-GLS
+ersdf_inflation_drift <- ur.ers(inflation, model = "constant", lag.max = 12, type = "DF-GLS")
+
+ersdf_tcu_drift <- ur.ers(tcu, model = "constant", lag.max = 12, type = "DF-GLS")
+
+# Run ADF test
+adf_inflation_none <- ur.df(inflation, type = "none", selectlags = "AIC")
+adf_inflation_drift <- ur.df(inflation, type = "drift", selectlags = "AIC")
+
+# Run PP test
+pp_inflation_none <- ur.pp(inflation, type = "Z-alpha", model = "constant", lags = NULL)
+pp_inflation_drift <- ur.pp(inflation, type = "Z-alpha", model = "trend", lags = NULL)
+
+pp_tcu_none <- ur.pp(tcu, type = "Z-alpha", model = "constant", lags = NULL)
+pp_tcu_drift <- ur.pp(tcu, type = "Z-alpha", model = "trend", lags = NULL)
+
+# Run KPSS test
+kpss_inflation_drift <- kpss.test(inflation)
+
+kpss_tcu_drift <- kpss.test(tcu)
+
+# Run ERS p-test
+ersp_inflation_drift <- ur.ers(inflation, model = "constant", lag.max = 12, type = "DF")
+
+ersp_tcu_drift <- ur.ers(tcu, model = "constant", lag.max = 12, type = "DF")
+
+# Run ERS DF-GLS
+ersdf_inflation_drift <- ur.ers(inflation, model = "constant", lag.max = 12, type = "DF-GLS")
+
+ersdf_tcu_drift <- ur.ers(tcu, model = "constant", lag.max = 12, type = "DF-GLS")
+
+
+
 # ADF Tests for inflation in levels
 ur.df(Inflation, type = "drift", lags = 12, selectlags = "AIC")
 summary(ur.df(Inflation, type = "drift", lags = 12, selectlags = "AIC"))

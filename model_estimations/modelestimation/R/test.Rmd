@@ -1,0 +1,103 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+```{r}
+# Load required libraries
+library(urca)
+library(tseries)
+library(dynamac)         
+library(forecast)         
+library(tseries)          
+library(nlme)             
+library(pdfetch)          
+library(zoo)              
+library(urca)             
+library(vars)            
+library(car)              
+library(dynlm)           
+library(tsDyn)            
+library(gets)             
+library(readxl)           
+library(aod)              
+library(egcm)            
+library(aTSA)             
+library(tidyverse)
+
+CPI = pdfetch_FRED("CPIAUCSL")
+names(CPI) = "CPI"
+
+Inflation = diff(log(CPI), lag = 12) * 100                              
+names(Inflation) = "Inflation"
+
+Inflation = ts(Inflation, start=c(1947, 1), frequency=12)
+Inflation = na.omit(Inflation) 
+TCU = pdfetch_FRED("TCU")
+names(TCU) = "TCU"
+TCU = ts(TCU, start=c(1967, 1), frequency=12)
+
+```
+
+```{r}
+tcu <- TCU 
+inflation <- Inflation
+
+# Run ADF test
+adf_inflation_none <- adf.test(inflation)
+
+adf_tcu_none <- adf.test(tcu)
+adf_tcu_drift <- adf.test(tcu)
+
+# Run PP test
+pp_inflation_none <- ur.pp(inflation, type = "Z-alpha", model = "constant", lags = NULL)
+pp_inflation_drift <- ur.pp(inflation, type = "Z-alpha", model = "trend", lags = NULL)
+
+pp_tcu_none <- ur.pp(tcu, type = "Z-alpha", model = "constant", lags = NULL)
+pp_tcu_drift <- ur.pp(tcu, type = "Z-alpha", model = "trend", lags = NULL)
+
+# Run KPSS test
+kpss_inflation_drift <- kpss.test(inflation)
+
+kpss_tcu_drift <- kpss.test(tcu)
+
+# Run ERS p-test
+ersp_inflation_drift <- ur.ers(inflation, model = "constant", lag.max = 12, type = "DF")
+
+ersp_tcu_drift <- ur.ers(tcu, model = "constant", lag.max = 12, type = "DF")
+
+# Run ERS DF-GLS
+ersdf_inflation_drift <- ur.ers(inflation, model = "constant", lag.max = 12, type = "DF-GLS")
+
+ersdf_tcu_drift <- ur.ers(tcu, model = "constant", lag.max = 12, type = "DF-GLS")
+
+```
+
+```{r}
+# Run ADF test
+# Run ADF test
+adf_inflation_none <- ur.df(inflation, type = "none", selectlags = "AIC")
+adf_inflation_drift <- ur.df(inflation, type = "drift", selectlags = "AIC")
+
+# Run PP test
+pp_inflation_none <- ur.pp(inflation, type = "Z-alpha", model = "constant", lags = NULL)
+pp_inflation_drift <- ur.pp(inflation, type = "Z-alpha", model = "trend", lags = NULL)
+
+pp_tcu_none <- ur.pp(tcu, type = "Z-alpha", model = "constant", lags = NULL)
+pp_tcu_drift <- ur.pp(tcu, type = "Z-alpha", model = "trend", lags = NULL)
+
+# Run KPSS test
+kpss_inflation_drift <- kpss.test(inflation)
+
+kpss_tcu_drift <- kpss.test(tcu)
+
+# Run ERS p-test
+ersp_inflation_drift <- ur.ers(inflation, model = "constant", lag.max = 12, type = "DF")
+
+ersp_tcu_drift <- ur.ers(tcu, model = "constant", lag.max = 12, type = "DF")
+
+# Run ERS DF-GLS
+ersdf_inflation_drift <- ur.ers(inflation, model = "constant", lag.max = 12, type = "DF-GLS")
+
+ersdf_tcu_drift <- ur.ers(tcu, model = "constant", lag.max = 12, type = "DF-GLS")
+```

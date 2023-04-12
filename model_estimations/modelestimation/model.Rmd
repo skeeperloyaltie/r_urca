@@ -312,10 +312,24 @@ head(m)
 ```{r}
 ardl.model <- dynardl(x ~ TCU, data = m, lags = list("TCU" = 1, "x" = 1), shockvar = 'TCU',
        diffs = c("x", "TCU"), simulate = TRUE)
+
 ```
 
 ```{r}
 summary(ardl.model)
+```
+
+```{r}
+library(vars)
+# Set up lag structure for VAR
+lags <- c(1, 2)
+# Create VAR model object
+var.model <- VAR(m, p = max(lags), type = "const", season = NULL, exogen = NULL, lag.max = NULL, ic = "AIC")
+# Compute IRFs
+irf <- irf(var.model, impulse = "TCU", response = "x", n.ahead = 10)
+# Plot IRFs
+plot(irf)
+
 
 ```
 ```{r}
@@ -371,3 +385,39 @@ forecast_ <- estimate(Inflation)
 
 forecast_
 ```
+```{r}
+# Load required libraries
+library(urca)
+library(tseries)
+tcu <- TCU 
+inflation <- Inflation
+
+# Run ADF test
+adf_inflation_none <- adf.test(inflation)
+
+adf_tcu_none <- adf.test(tcu)
+adf_tcu_drift <- adf.test(tcu)
+
+# Run PP test
+pp_inflation_none <- ur.pp(inflation, type = "Z-alpha", model = "constant", lags = NULL)
+pp_inflation_drift <- ur.pp(inflation, type = "Z-alpha", model = "trend", lags = NULL)
+
+pp_tcu_none <- ur.pp(tcu, type = "Z-alpha", model = "constant", lags = NULL)
+pp_tcu_drift <- ur.pp(tcu, type = "Z-alpha", model = "trend", lags = NULL)
+
+# Run KPSS test
+kpss_inflation_drift <- kpss.test(inflation)
+
+kpss_tcu_drift <- kpss.test(tcu)
+
+# Run ERS p-test
+ersp_inflation_drift <- ur.ers(inflation, model = "constant", lag.max = 12, type = "DF")
+
+ersp_tcu_drift <- ur.ers(tcu, model = "constant", lag.max = 12, type = "DF")
+
+# Run ERS DF-GLS
+ersdf_inflation_drift <- ur.ers(inflation, model = "constant", lag.max = 12, type = "DF-GLS")
+
+ersdf_tcu_drift <- ur.ers(tcu, model = "constant", lag.max = 12, type = "DF-GLS")
+```
+
